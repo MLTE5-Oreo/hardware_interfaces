@@ -181,6 +181,12 @@ void onAysncNanNotifyResponse(transaction_id id, NanResponseMsg* msg) {
   }
 }
 
+std::function<void(const NanPublishRepliedInd&)>
+    on_nan_event_publish_replied_user_callback;
+void onAysncNanEventPublishReplied(NanPublishRepliedInd* /* event */) {
+  LOG(ERROR) << "onAysncNanEventPublishReplied triggered";
+}
+
 std::function<void(const NanPublishTerminatedInd&)>
     on_nan_event_publish_terminated_user_callback;
 void onAysncNanEventPublishTerminated(NanPublishTerminatedInd* event) {
@@ -334,13 +340,12 @@ wifi_error WifiLegacyHal::initialize() {
 }
 
 wifi_error WifiLegacyHal::start() {
-  // Ensure that we're starting in a good state.
-  CHECK(global_func_table_.wifi_initialize && !global_handle_ &&
-        !wlan_interface_handle_ && !awaiting_event_loop_termination_);
   if (is_started_) {
     LOG(DEBUG) << "Legacy HAL already started";
     return WIFI_SUCCESS;
   }
+  CHECK(global_func_table_.wifi_initialize && !global_handle_ &&
+        !wlan_interface_handle_ && !awaiting_event_loop_termination_);
   LOG(DEBUG) << "Starting legacy HAL";
   if (!iface_tool_.SetWifiUpState(true)) {
     LOG(ERROR) << "Failed to set WiFi interface up";
@@ -1060,6 +1065,7 @@ wifi_error WifiLegacyHal::nanRegisterCallbackHandlers(
   return global_func_table_.wifi_nan_register_handler(
       wlan_interface_handle_,
       {onAysncNanNotifyResponse,
+       onAysncNanEventPublishReplied,
        onAysncNanEventPublishTerminated,
        onAysncNanEventMatch,
        onAysncNanEventMatchExpired,
